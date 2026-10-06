@@ -1,2 +1,5 @@
-# phone-checkup
-Python tool for finding scareware apps on Android phones. Built because I get asked to "check this phone" all the time.
+# phonecheck
+
+Read-only junk-app and health checkup for Android phones, over ADB.
+
+(Work in progress. Full documentation arrives with the first release.)
