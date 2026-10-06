@@ -1,0 +1,29 @@
+# Well-known apps that are never flagged, one package name per line.
+#
+# An entry only counts when the app was installed from a real app store.
+# A package name alone proves nothing: anyone can build a sideloaded app that
+# uses the name "com.whatsapp" (see rules.py, is_trusted).
+#
+# Verify a package name on the phone (adb shell pm list packages -3) before
+# adding it. Lines may carry a trailing # comment.
+
+com.whatsapp                 # WhatsApp
+com.facebook.katana          # Facebook
+com.facebook.orca            # Messenger
+com.instagram.android        # Instagram
+com.zhiliaoapp.musically     # TikTok
+com.snapchat.android         # Snapchat
+com.spotify.music            # Spotify
+com.netflix.mediaclient      # Netflix
+com.amazon.mShop.android.shopping  # Amazon Shopping
+com.ubercab                  # Uber
+com.venmo                    # Venmo
+com.paypal.android.p2pmobile # PayPal
+org.telegram.messenger       # Telegram
+org.thoughtcrime.securesms   # Signal
+com.viber.voip               # Viber
+us.zoom.videomeetings        # Zoom
+com.microsoft.teams          # Microsoft Teams
+com.microsoft.office.outlook # Outlook
+org.mozilla.firefox          # Firefox
+com.x8bit.bitwarden          # Bitwarden (uses an accessibility service legitimately)

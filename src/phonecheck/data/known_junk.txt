@@ -1,0 +1,11 @@
+# Packages that are always reported as likely junk, one per line.
+#
+# This list ships empty on purpose. The rules in rules.py catch scareware by
+# behaviour; this file is for the apps you keep seeing in person. When a
+# customer's phone has a fake cleaner, add its package name here (find it with
+# `adb shell pm list packages -3`) and every future scan flags it instantly.
+#
+# Add your own extras without editing this file:
+#   phonecheck scan --junk-list my_junk.txt
+#
+# Format: one package name per line; lines may carry a trailing # comment.
