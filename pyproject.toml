@@ -13,6 +13,7 @@ dependencies = []  # standard library only, on purpose
 
 [project.optional-dependencies]
 dev = ["pytest>=7"]
+e2e = ["pytest>=7", "playwright>=1.40"]  # real-browser tests; they skip themselves without it
 
 [project.scripts]
 phonecheck = "phonecheck.cli:main"

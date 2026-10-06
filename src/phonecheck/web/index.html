@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="phonecheck-token" content="__TOKEN__">
+<title>Phone checkup</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<main>
+  <h1>Phone checkup</h1>
+  <p id="source" class="sub">Connecting&hellip;</p>
+  <p id="simulated" class="note" hidden>This is a simulated phone. Nothing real will be changed.</p>
+
+  <div class="actions">
+    <button id="scan" type="button" class="primary">Scan phone</button>
+  </div>
+  <p id="status" role="status" aria-live="polite"></p>
+
+  <section id="summary" hidden></section>
+  <section id="findings"></section>
+  <section id="notes" hidden></section>
+
+  <div id="removebar" class="removebar" hidden>
+    <button id="remove" type="button" class="danger" disabled>Remove selected apps</button>
+    <span id="selected-count" class="sub"></span>
+  </div>
+
+  <section id="results" hidden></section>
+
+  <footer>
+    These are signals, not verdicts. Review each app with the phone's owner before removing anything.
+    When you are finished, turn USB debugging off again (Settings &gt; Developer options).
+  </footer>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>
