@@ -1,0 +1,16 @@
+Packages:
+  Package [com.demo.fitness.steps] (4f2a9c1):
+    userId=10234
+    versionCode=100 minSdk=24 targetSdk=33
+    versionName=5.6.0
+    firstInstallTime=2025-08-08 06:30:00
+    lastUpdateTime=2025-08-08 06:30:00
+    installerPackageName=com.android.vending
+    requested permissions:
+      android.permission.INTERNET
+      android.permission.ACTIVITY_RECOGNITION
+    install permissions:
+      android.permission.INTERNET: granted=true
+    User 0: ceDataInode=1234 installed=true hidden=false suspended=false
+      runtime permissions:
+        android.permission.ACTIVITY_RECOGNITION: granted=true, flags=[ USER_SET]

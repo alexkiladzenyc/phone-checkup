@@ -1,0 +1,5 @@
+Current Battery Service state:
+  status: 3
+  health: 2
+  level: 82
+  temperature: 301

@@ -1,0 +1,8 @@
+package:com.whatsapp  installer=com.android.vending
+package:com.spotify.music  installer=com.android.vending
+package:com.demo.weather.today  installer=com.android.vending
+package:com.demo.notes.simple  installer=com.android.vending
+package:com.demo.bank.mobile  installer=com.android.vending
+package:org.demo.pdfviewer  installer=com.android.vending
+package:com.demo.fitness.steps  installer=com.android.vending
+package:com.demo.maps.local  installer=com.android.vending

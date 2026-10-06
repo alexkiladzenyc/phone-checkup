@@ -1,0 +1,16 @@
+Packages:
+  Package [com.freegames.puzzle.colorblast] (4f2a9c1):
+    userId=10234
+    versionCode=100 minSdk=24 targetSdk=33
+    versionName=0.9.7
+    firstInstallTime=2026-09-18 16:40:09
+    lastUpdateTime=2026-09-18 16:40:09
+    installerPackageName=null
+    requested permissions:
+      android.permission.INTERNET
+      android.permission.RECEIVE_BOOT_COMPLETED
+    install permissions:
+      android.permission.INTERNET: granted=true
+      android.permission.RECEIVE_BOOT_COMPLETED: granted=true
+    User 0: ceDataInode=1234 installed=true hidden=false suspended=false
+      runtime permissions:

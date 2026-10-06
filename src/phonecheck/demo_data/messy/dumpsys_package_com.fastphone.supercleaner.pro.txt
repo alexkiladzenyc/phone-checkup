@@ -1,0 +1,22 @@
+Packages:
+  Package [com.fastphone.supercleaner.pro] (4f2a9c1):
+    userId=10234
+    versionCode=100 minSdk=24 targetSdk=33
+    versionName=4.2.1
+    firstInstallTime=2026-10-04 18:20:11
+    lastUpdateTime=2026-10-04 18:20:11
+    installerPackageName=null
+    requested permissions:
+      android.permission.INTERNET
+      android.permission.SYSTEM_ALERT_WINDOW
+      android.permission.RECEIVE_BOOT_COMPLETED
+      android.permission.KILL_BACKGROUND_PROCESSES
+      android.permission.CLEAR_APP_CACHE
+      android.permission.PACKAGE_USAGE_STATS
+    install permissions:
+      android.permission.INTERNET: granted=true
+      android.permission.RECEIVE_BOOT_COMPLETED: granted=true
+      android.permission.SYSTEM_ALERT_WINDOW: granted=true
+      android.permission.KILL_BACKGROUND_PROCESSES: granted=true
+    User 0: ceDataInode=1234 installed=true hidden=false suspended=false
+      runtime permissions:

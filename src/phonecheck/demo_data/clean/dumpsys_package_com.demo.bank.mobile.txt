@@ -1,0 +1,16 @@
+Packages:
+  Package [com.demo.bank.mobile] (4f2a9c1):
+    userId=10234
+    versionCode=100 minSdk=24 targetSdk=33
+    versionName=8.1.0
+    firstInstallTime=2025-05-15 10:00:00
+    lastUpdateTime=2025-05-15 10:00:00
+    installerPackageName=com.android.vending
+    requested permissions:
+      android.permission.INTERNET
+      android.permission.USE_BIOMETRIC
+    install permissions:
+      android.permission.INTERNET: granted=true
+      android.permission.USE_BIOMETRIC: granted=true
+    User 0: ceDataInode=1234 installed=true hidden=false suspended=false
+      runtime permissions:

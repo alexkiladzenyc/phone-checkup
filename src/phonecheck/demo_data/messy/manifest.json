@@ -1,0 +1,33 @@
+{
+  "commands": {
+    "cmd appops query-op SYSTEM_ALERT_WINDOW allow": "cmd_appops_query-op_SYSTEM_ALERT_WINDOW_allow.txt",
+    "date +%Y-%m-%dT%H:%M:%S": "date_Y-_m-_dT_H_M_S.txt",
+    "df /data": "df_data.txt",
+    "dumpsys battery": "dumpsys_battery.txt",
+    "dumpsys device_policy": "dumpsys_device_policy.txt",
+    "dumpsys package com.demo.bank.mobile": "dumpsys_package_com.demo.bank.mobile.txt",
+    "dumpsys package com.demo.fitness.steps": "dumpsys_package_com.demo.fitness.steps.txt",
+    "dumpsys package com.demo.notes.simple": "dumpsys_package_com.demo.notes.simple.txt",
+    "dumpsys package com.demo.weather.today": "dumpsys_package_com.demo.weather.today.txt",
+    "dumpsys package com.facebook.katana": "dumpsys_package_com.facebook.katana.txt",
+    "dumpsys package com.fastcharge.batterysaver.cooler": "dumpsys_package_com.fastcharge.batterysaver.cooler.txt",
+    "dumpsys package com.fastphone.supercleaner.pro": "dumpsys_package_com.fastphone.supercleaner.pro.txt",
+    "dumpsys package com.freegames.puzzle.colorblast": "dumpsys_package_com.freegames.puzzle.colorblast.txt",
+    "dumpsys package com.instagram.android": "dumpsys_package_com.instagram.android.txt",
+    "dumpsys package com.spotify.music": "dumpsys_package_com.spotify.music.txt",
+    "dumpsys package com.virusshield.antivirus.free": "dumpsys_package_com.virusshield.antivirus.free.txt",
+    "dumpsys package com.whatsapp": "dumpsys_package_com.whatsapp.txt",
+    "dumpsys package org.demo.pdfviewer": "dumpsys_package_org.demo.pdfviewer.txt",
+    "getprop ro.build.version.release": "getprop_ro.build.version.release.txt",
+    "getprop ro.build.version.sdk": "getprop_ro.build.version.sdk.txt",
+    "getprop ro.product.manufacturer": "getprop_ro.product.manufacturer.txt",
+    "getprop ro.product.model": "getprop_ro.product.model.txt",
+    "pm list packages -3 -i": "pm_list_packages_-3_-i.txt",
+    "settings get secure enabled_accessibility_services": "settings_get_secure_enabled_accessibility_services.txt"
+  },
+  "errors": {},
+  "format": 1,
+  "uninstall": {
+    "com.virusshield.antivirus.free": "Failure [DELETE_FAILED_DEVICE_POLICY_MANAGER]"
+  }
+}

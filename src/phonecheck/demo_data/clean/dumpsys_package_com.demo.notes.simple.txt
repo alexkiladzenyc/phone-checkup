@@ -1,0 +1,14 @@
+Packages:
+  Package [com.demo.notes.simple] (4f2a9c1):
+    userId=10234
+    versionCode=100 minSdk=24 targetSdk=33
+    versionName=1.2.0
+    firstInstallTime=2025-04-04 21:10:00
+    lastUpdateTime=2025-04-04 21:10:00
+    installerPackageName=com.android.vending
+    requested permissions:
+      android.permission.INTERNET
+    install permissions:
+      android.permission.INTERNET: granted=true
+    User 0: ceDataInode=1234 installed=true hidden=false suspended=false
+      runtime permissions:

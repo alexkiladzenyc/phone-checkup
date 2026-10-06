@@ -1,0 +1,4 @@
+Policy for user 0:
+Enabled Device Admins (User 0, provisioningState: 0):
+
+Encryption Status: ACTIVE_PER_USER

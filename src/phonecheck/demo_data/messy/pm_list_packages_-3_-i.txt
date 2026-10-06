@@ -1,0 +1,13 @@
+package:com.fastphone.supercleaner.pro  installer=null
+package:com.virusshield.antivirus.free  installer=com.android.vending
+package:com.fastcharge.batterysaver.cooler  installer=com.android.vending
+package:com.freegames.puzzle.colorblast  installer=null
+package:com.instagram.android  installer=null
+package:com.whatsapp  installer=com.android.vending
+package:com.spotify.music  installer=com.android.vending
+package:com.facebook.katana  installer=com.android.vending
+package:com.demo.weather.today  installer=com.android.vending
+package:com.demo.notes.simple  installer=com.android.vending
+package:com.demo.bank.mobile  installer=com.android.vending
+package:org.demo.pdfviewer  installer=com.android.vending
+package:com.demo.fitness.steps  installer=com.android.vending

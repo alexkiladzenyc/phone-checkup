@@ -1,0 +1,24 @@
+Packages:
+  Package [com.virusshield.antivirus.free] (4f2a9c1):
+    userId=10234
+    versionCode=100 minSdk=24 targetSdk=33
+    versionName=2.9.0
+    firstInstallTime=2026-09-28 11:02:45
+    lastUpdateTime=2026-09-28 11:02:45
+    installerPackageName=com.android.vending
+    requested permissions:
+      android.permission.INTERNET
+      android.permission.SYSTEM_ALERT_WINDOW
+      android.permission.RECEIVE_BOOT_COMPLETED
+      android.permission.READ_CONTACTS
+      android.permission.READ_SMS
+      android.permission.READ_CALL_LOG
+    install permissions:
+      android.permission.INTERNET: granted=true
+      android.permission.RECEIVE_BOOT_COMPLETED: granted=true
+      android.permission.SYSTEM_ALERT_WINDOW: granted=true
+    User 0: ceDataInode=1234 installed=true hidden=false suspended=false
+      runtime permissions:
+        android.permission.READ_CONTACTS: granted=true, flags=[ USER_SET]
+        android.permission.READ_SMS: granted=true, flags=[ USER_SET]
+        android.permission.READ_CALL_LOG: granted=true, flags=[ USER_SET]

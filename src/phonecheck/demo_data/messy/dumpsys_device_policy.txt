@@ -1,0 +1,7 @@
+Policy for user 0:
+Enabled Device Admins (User 0, provisioningState: 0):
+  com.virusshield.antivirus.free/com.virusshield.antivirus.free.AdminReceiver:
+    uid=10345
+    testOnlyAdmin=false
+
+Encryption Status: ACTIVE_PER_USER

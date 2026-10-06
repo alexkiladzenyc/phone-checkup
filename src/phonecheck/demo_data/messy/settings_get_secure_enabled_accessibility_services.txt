@@ -1,0 +1,1 @@
+com.fastphone.supercleaner.pro/com.fastphone.supercleaner.pro.AccessService:com.instagram.android/com.instagram.android.AccessService

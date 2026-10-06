@@ -1,0 +1,4 @@
+Uid mode: SYSTEM_ALERT_WINDOW: allow
+com.fastphone.supercleaner.pro
+com.virusshield.antivirus.free
+com.instagram.android
