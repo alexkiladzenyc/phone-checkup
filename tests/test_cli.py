@@ -196,7 +196,7 @@ class TestParserBasics:
         with pytest.raises(SystemExit):
             main(["--help"])
         out = capsys.readouterr().out
-        for command in ("devices", "scan", "remove", "capture", "serve"):
+        for command in ("devices", "scan", "remove", "capture", "serve", "diff", "history"):
             assert command in out
 
     def test_keyboard_interrupt_is_handled(self, monkeypatch):
@@ -206,3 +206,91 @@ class TestParserBasics:
         monkeypatch.setattr(cli, "collect", interrupted)
         code, _, err = run(["scan", "--demo", "clean"])
         assert code == 130 and "cancelled" in err
+
+
+class TestHistoryCommands:
+    @pytest.fixture
+    def db(self, tmp_path):
+        return str(tmp_path / "h.db")
+
+    def test_scan_is_not_saved_by_default(self, db):
+        run(["scan", "--demo", "messy", "--db", db])
+        _, out, _ = run(["history", "--db", db])
+        assert "No saved scans yet" in out
+
+    def test_save_keeps_json_output_clean(self, db):
+        code, out, err = run(["scan", "--demo", "messy", "--format", "json", "--save", "--db", db])
+        assert code == 0 and json.loads(out)["scanned_apps"] == 14
+        assert "Saved to history as scan #1." in err
+
+    def test_list_stats_and_export(self, db, tmp_path):
+        run(["scan", "--demo", "messy", "--save", "--db", db])
+        run(["scan", "--demo", "clean", "--save", "--db", db])
+
+        code, out, _ = run(["history", "list", "--db", db])
+        assert code == 0 and "DemoCorp Demo A1" in out and "DemoCorp Demo B2" in out
+
+        code, out, _ = run(["history", "stats", "--db", db, "--top", "2"])
+        assert code == 0 and "2 saved scans" in out
+        assert "com.fastphone.supercleaner.pro" in out and "com.instagram.android" not in out  # --top 2
+        assert "boot_start" in out
+
+        target = tmp_path / "out.csv"
+        code, out, _ = run(["history", "export", "--db", db, "--out", str(target)])
+        assert code == 0 and "Wrote 6 rows" in out
+        assert target.read_text(encoding="utf-8").startswith("scan_id,scanned_at,")
+
+    def test_export_to_screen(self, db):
+        run(["scan", "--demo", "messy", "--save", "--db", db])
+        _, out, _ = run(["history", "export", "--db", db])
+        assert len(out.strip().splitlines()) == 7  # header + 6 flagged apps
+
+    def test_stats_since_and_empty(self, db):
+        run(["scan", "--demo", "messy", "--save", "--db", db])
+        _, out, _ = run(["history", "stats", "--db", db, "--since", "2027-01-01"])
+        assert "No flagged apps in the saved scans since 2027-01-01." in out
+
+    def test_bad_since_date(self, db):
+        code, _, err = run(["history", "stats", "--db", db, "--since", "last tuesday"])
+        assert code == 1 and "YYYY-MM-DD" in err
+
+    def test_remove_can_save_the_scan_it_started_with(self, db):
+        run(["remove", "--demo", "messy", "--save", "--db", db, "--dry-run"])
+        _, out, _ = run(["history", "--db", db])
+        assert "DemoCorp Demo A1" in out
+
+    def test_unusable_database_is_a_clean_error(self, tmp_path):
+        bad = tmp_path / "bad.db"
+        bad.write_bytes(b"not sqlite" * 200)
+        code, _, err = run(["history", "--db", str(bad)])
+        assert code == 1 and err.startswith("error:") and "not a phonecheck history database" in err
+
+    def test_environment_variable_picks_the_database(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("PHONECHECK_DB", str(tmp_path / "env.db"))
+        run(["scan", "--demo", "clean", "--save"])
+        assert (tmp_path / "env.db").exists()
+
+
+class TestDiff:
+    def save(self, tmp_path, name, demo):
+        path = tmp_path / name
+        run(["scan", "--demo", demo, "--format", "json", "--out", str(path)])
+        return str(path)
+
+    def test_same_report_twice(self, tmp_path):
+        a = self.save(tmp_path, "a.json", "messy")
+        code, out, _ = run(["diff", a, a, "--fail-on-new"])
+        assert code == 0 and "No change" in out and "Unchanged: 6 flagged apps." in out
+
+    def test_fail_on_new(self, tmp_path):
+        clean, messy = self.save(tmp_path, "c.json", "clean"), self.save(tmp_path, "m.json", "messy")
+        assert run(["diff", clean, messy])[0] == 0
+        code, out, _ = run(["diff", clean, messy, "--fail-on-new"])
+        assert code == 1 and "NEW SINCE LAST TIME (6)" in out
+        assert run(["diff", messy, clean, "--fail-on-new"])[0] == 0  # only things going away
+
+    def test_not_a_report(self, tmp_path):
+        other = tmp_path / "other.json"
+        other.write_text('{"hello": "world"}', encoding="utf-8")
+        code, _, err = run(["diff", str(other), str(other)])
+        assert code == 1 and "not a phonecheck JSON report" in err

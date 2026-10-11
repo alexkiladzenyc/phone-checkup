@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING, Any
 
 from .adb import AdbError, list_devices
 from .collector import collect
+from .history import open_history
 from .removal import RemovalRefused, remove_packages
 from .report import to_dict
 from .rules import Context, analyze
@@ -59,9 +60,10 @@ SECURITY_HEADERS = {
 
 
 class AppState:
-    def __init__(self, source: DeviceSource, context: Context, port: int):
+    def __init__(self, source: DeviceSource, context: Context, port: int, history_path: Path | None = None):
         self.source = source
         self.context = context
+        self.history_path = history_path  # None: scans are not saved
         self.token = secrets.token_urlsafe(32)
         self.allowed_hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
         self.lock = threading.Lock()  # one phone operation at a time
@@ -122,6 +124,7 @@ class Handler(BaseHTTPRequestHandler):
             raise _HttpError(HTTPStatus.LENGTH_REQUIRED, "Content-Length is required.") from None
         if length < 0 or length > MAX_BODY:
             raise _HttpError(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "Request body too large.")
+        self._body_read = True
         try:
             data = json.loads(self.rfile.read(length) or b"{}")
         except ValueError:
@@ -130,7 +133,26 @@ class Handler(BaseHTTPRequestHandler):
             raise _HttpError(HTTPStatus.BAD_REQUEST, "Body must be a JSON object.")
         return data
 
+    def _discard_unread_body(self) -> None:
+        """Read and drop a rejected request's body before answering.
+
+        Closing a socket with unread data makes Windows (and some proxies) send a
+        TCP reset, so the browser shows a network error instead of our message.
+        Oversized bodies are never read; that connection is simply closed.
+        """
+        self.close_connection = True
+        if self._body_read:
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return
+        if 0 < length <= MAX_BODY:
+            self.rfile.read(length)
+        self._body_read = True
+
     def _dispatch(self, method: str) -> None:
+        self._body_read = False
         try:
             self._check_host()
             path = self.path.split("?", 1)[0]
@@ -153,6 +175,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 raise _HttpError(HTTPStatus.NOT_FOUND, "Not found.")
         except _HttpError as exc:
+            self._discard_unread_body()
             self._json(exc.status, {"error": exc.message})
         except RemovalRefused as exc:
             self._json(HTTPStatus.CONFLICT, {"error": str(exc)})
@@ -186,8 +209,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def _scan(self) -> dict[str, Any]:
         with self.state.lock:
-            snapshot = collect(self.state.source.open())
-            return to_dict(analyze(snapshot, self.state.context))
+            report = analyze(collect(self.state.source.open()), self.state.context)
+            payload = to_dict(report)
+            if self.state.history_path is not None:
+                with open_history(self.state.history_path) as history:
+                    payload["saved_as"] = history.record(report)
+            return payload
 
     def _remove(self, body: dict[str, Any]) -> dict[str, Any]:
         packages = body.get("packages")
@@ -207,19 +234,23 @@ class Handler(BaseHTTPRequestHandler):
         }
 
 
-def make_server(source: DeviceSource, context: Context, port: int = 8765) -> tuple[ThreadingHTTPServer, AppState]:
+def make_server(
+    source: DeviceSource, context: Context, port: int = 8765, history_path: Path | None = None
+) -> tuple[ThreadingHTTPServer, AppState]:
     """Bind to localhost (port 0 picks a free one) without starting to serve."""
     try:
         server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     except OSError as exc:
         raise ValueError(f"Could not listen on port {port}: {exc.strerror or exc}. Try --port with another number.") from exc
-    state = AppState(source, context, server.server_address[1])
+    state = AppState(source, context, server.server_address[1], history_path)
     server.state = state  # type: ignore[attr-defined]
     return server, state
 
 
-def serve(source: DeviceSource, context: Context, *, port: int, open_browser: bool, io: Io) -> int:
-    server, _ = make_server(source, context, port)
+def serve(
+    source: DeviceSource, context: Context, *, port: int, open_browser: bool, io: Io, history_path: Path | None = None
+) -> int:
+    server, _ = make_server(source, context, port, history_path)
     url = f"http://127.0.0.1:{server.server_address[1]}/"
     io.say(f"phonecheck is running at {url}   (press Ctrl+C to stop)")
     io.say(f"Using: {source.label}. Only this computer can reach this page.")

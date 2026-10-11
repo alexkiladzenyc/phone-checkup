@@ -155,8 +155,9 @@ async function scan() {
   setStatus("Reading the phone. This can take a minute on a phone with many apps…");
   $("results").hidden = true;
   try {
-    renderReport(await api("/api/scan", {}));
-    setStatus("Scan finished.", "ok");
+    const report = await api("/api/scan", {});
+    renderReport(report);
+    setStatus(report.saved_as ? "Scan finished and saved to history as scan #" + report.saved_as + "." : "Scan finished.", "ok");
   } catch (error) {
     setStatus(error.message, "bad");
   } finally {

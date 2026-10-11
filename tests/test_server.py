@@ -7,6 +7,7 @@ import pytest
 
 from phonecheck import server as server_module
 from phonecheck.adb import AdbDeviceEntry, AdbError
+from phonecheck.history import History
 from phonecheck.rules import build_context
 from phonecheck.server import MAX_BODY, TOKEN_HEADER, make_server
 from phonecheck.source import DeviceSource
@@ -188,6 +189,24 @@ class TestScanApi:
         status, _, data = client.request("GET", "/api/status")
         assert status == 200
         assert data == {"source": "demo phone (messy)", "simulated": True, "phones": [], "note": None}
+
+    def test_scans_are_saved_only_when_asked(self, web, tmp_path):
+        client, _, _ = web
+        assert "saved_as" not in client.request("POST", "/api/scan", body={})[2]
+
+        db = tmp_path / "h.db"
+        httpd, state = make_server(DeviceSource(demo="messy"), build_context(), port=0, history_path=db)
+        thread = start(httpd)
+        try:
+            saving = Client(httpd, state)
+            assert saving.request("POST", "/api/scan", body={})[2]["saved_as"] == 1
+            assert saving.request("POST", "/api/scan", body={})[2]["saved_as"] == 2
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+            thread.join(timeout=5)
+        with History(db) as history:
+            assert history.scan_count() == 2
 
     def test_scan_returns_the_report(self, web):
         client, _, _ = web

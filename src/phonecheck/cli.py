@@ -1,4 +1,4 @@
-"""Command line: phonecheck devices | scan | remove | capture | serve."""
+"""Command line: phonecheck devices | scan | remove | capture | serve | diff | history."""
 
 from __future__ import annotations
 
@@ -6,12 +6,15 @@ import argparse
 import sys
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import TextIO
 
 from . import __version__, lists
 from .adb import AdbError, Device, RecordingDevice, list_devices
 from .collector import collect
+from .compare import CompareError, compare, load_report, render_comparison
+from .history import ENV_VAR, HistoryError, default_path, open_history
 from .models import Level, Report
 from .removal import RemovalRefused, remove_packages
 from .report import USB_REMINDER, format_finding, render_html, render_json, render_text
@@ -54,6 +57,27 @@ def _add_source_args(parser: argparse.ArgumentParser) -> None:
 def _add_list_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--junk-list", action="append", default=[], metavar="FILE", help="extra known-junk packages")
     parser.add_argument("--trusted-list", action="append", default=[], metavar="FILE", help="extra trusted packages")
+
+
+def _add_save_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--save", action="store_true",
+        help="add this scan to the local history (flagged apps and phone model only; see `phonecheck history`)",
+    )
+    _add_db_arg(parser)
+
+
+def _add_db_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--db", metavar="FILE", help=f"history database (default: ${ENV_VAR} or {default_path()})")
+
+
+def _save(report: Report, args: argparse.Namespace, io: Io) -> None:
+    if not args.save:
+        return
+    with open_history(args.db) as history:
+        scan_id = history.record(report)
+    # stderr, so `scan --format json --save` still prints clean JSON
+    io.warn(f"Saved to history as scan #{scan_id}.")
 
 
 def _context(args: argparse.Namespace) -> Context:
@@ -103,6 +127,7 @@ def cmd_devices(args: argparse.Namespace, io: Io) -> int:
 def cmd_scan(args: argparse.Namespace, io: Io) -> int:
     source = DeviceSource.from_args(args)
     report, _ = _scan(source, args, io)
+    _save(report, args, io)
 
     if args.format == "text":
         text = render_text(report)
@@ -150,6 +175,7 @@ def parse_selection(answer: str, count: int) -> list[int]:
 def cmd_remove(args: argparse.Namespace, io: Io) -> int:
     source = DeviceSource.from_args(args)
     report, device = _scan(source, args, io)
+    _save(report, args, io)
     level = Level(args.min_level)
     candidates = list(report.at_level(level))
 
@@ -220,7 +246,80 @@ def cmd_capture(args: argparse.Namespace, io: Io) -> int:
 def cmd_serve(args: argparse.Namespace, io: Io) -> int:
     from .server import serve
 
-    return serve(DeviceSource.from_args(args), _context(args), port=args.port, open_browser=not args.no_browser, io=io)
+    history_path = (Path(args.db) if args.db else default_path()) if args.save else None
+    if history_path:
+        open_history(history_path).close()  # fail now, not on the first click, if the database is unusable
+        io.say(f"Saving every scan to {history_path}.")
+    return serve(
+        DeviceSource.from_args(args), _context(args),
+        port=args.port, open_browser=not args.no_browser, io=io, history_path=history_path,
+    )
+
+
+def cmd_diff(args: argparse.Namespace, io: Io) -> int:
+    result = compare(load_report(args.before), load_report(args.after))
+    io.out.write(render_comparison(result))
+    return 1 if args.fail_on_new and (result.new or result.worse) else 0
+
+
+def _parse_since(value: str | None) -> datetime | None:
+    if value is None:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        raise CliError(f"Could not understand the date {value!r}. Use YYYY-MM-DD.") from None
+
+
+def cmd_history_list(args: argparse.Namespace, io: Io) -> int:
+    with open_history(args.db) as history:
+        scans = history.recent(args.limit)
+    if not scans:
+        io.say("No saved scans yet. Add one with `phonecheck scan --save`.")
+        return 0
+    io.say(f"{'#':>4}  {'when':<16}  {'phone':<24} {'android':>7}  {'apps':>4}  {'likely':>6}  {'look':>4}")
+    for scan in scans:
+        io.say(
+            f"{scan.id:>4}  {scan.scanned_at:%Y-%m-%d %H:%M}  {scan.phone[:24]:<24} {scan.android[:7]:>7}  "
+            f"{scan.apps_checked:>4}  {scan.high:>6}  {scan.medium:>4}"
+        )
+    return 0
+
+
+def cmd_history_stats(args: argparse.Namespace, io: Io) -> int:
+    since = _parse_since(args.since)
+    with open_history(args.db) as history:
+        total = history.scan_count()
+        top = history.top_packages(args.top, since=since)
+        rules = history.rule_frequency(since=since)
+    scope = f" since {args.since}" if since else ""
+    if not top:
+        io.say(f"No flagged apps in the saved scans{scope}.")
+        return 0
+    io.say(f"Most often flagged apps ({total} saved scan{'s' if total != 1 else ''}{scope}):")
+    io.say()
+    io.say(f"  {'app':<40} {'scans':>6}  {'likely':>6}  {'avg':>5}  last seen")
+    for stat in top:
+        io.say(f"  {stat.package[:40]:<40} {stat.scans:>6}  {stat.high:>6}  {stat.average_score:>5.1f}  {stat.last_seen:%Y-%m-%d}")
+    io.say()
+    io.say("Rules behind the flags:")
+    for rule in rules:
+        io.say(f"  {rule.rule:<24} {rule.findings:>5}  ({rule.share:.0%} of flagged apps)")
+    io.say()
+    io.say("Apps that keep coming back are good candidates for a --junk-list file.")
+    return 0
+
+
+def cmd_history_export(args: argparse.Namespace, io: Io) -> int:
+    since = _parse_since(args.since)
+    with open_history(args.db) as history:
+        if args.out:
+            with open(args.out, "w", encoding="utf-8", newline="") as handle:
+                rows = history.export_csv(handle, since=since)
+            io.say(f"Wrote {rows} row{'s' if rows != 1 else ''} to {args.out}.")
+        else:
+            history.export_csv(io.out, since=since)
+    return 0
 
 
 # --------------------------------------------------------------------------
@@ -244,6 +343,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = commands.add_parser("scan", help="check a phone and print a report (changes nothing)")
     _add_source_args(p)
     _add_list_args(p)
+    _add_save_args(p)
     p.add_argument("--format", choices=("text", "json", "html"), default="text")
     p.add_argument("--out", metavar="FILE", help=f"write the report to a file (html defaults to {DEFAULT_HTML_NAME})")
     p.set_defaults(func=cmd_scan)
@@ -251,6 +351,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = commands.add_parser("remove", help="scan, then remove the apps you choose (asks twice)")
     _add_source_args(p)
     _add_list_args(p)
+    _add_save_args(p)
     p.add_argument("--min-level", choices=("high", "medium"), default="high", help="lowest level to offer (default: high)")
     p.add_argument("--dry-run", action="store_true", help="show what would be offered and stop")
     p.set_defaults(func=cmd_remove)
@@ -263,9 +364,38 @@ def build_parser() -> argparse.ArgumentParser:
     p = commands.add_parser("serve", help="run the checkup as a local web page")
     _add_source_args(p)
     _add_list_args(p)
+    _add_save_args(p)
     p.add_argument("--port", type=int, default=8765)
     p.add_argument("--no-browser", action="store_true", help="do not open a browser window")
     p.set_defaults(func=cmd_serve)
+
+    p = commands.add_parser("diff", help="compare two JSON reports of a phone: new, gone, worse, improved")
+    p.add_argument("before", help="the earlier report (from `scan --format json --out FILE`)")
+    p.add_argument("after", help="the later report")
+    p.add_argument("--fail-on-new", action="store_true", help="exit with status 1 if anything is new or got worse")
+    p.set_defaults(func=cmd_diff)
+
+    p = commands.add_parser("history", help="saved scans: list, stats, export")
+    _add_db_arg(p)
+    p.set_defaults(func=cmd_history_list, limit=20)
+    actions = p.add_subparsers(dest="action", metavar="action")
+
+    a = actions.add_parser("list", help="most recent saved scans (the default)")
+    a.add_argument("--limit", type=int, default=20)
+    _add_db_arg(a)
+    a.set_defaults(func=cmd_history_list)
+
+    a = actions.add_parser("stats", help="which apps and rules come up most often")
+    a.add_argument("--top", type=int, default=10, help="how many apps to list (default: 10)")
+    a.add_argument("--since", metavar="DATE", help="only scans on or after this date (YYYY-MM-DD)")
+    _add_db_arg(a)
+    a.set_defaults(func=cmd_history_stats)
+
+    a = actions.add_parser("export", help="CSV, one row per flagged app per scan")
+    a.add_argument("--out", metavar="FILE", help="write to a file instead of the screen")
+    a.add_argument("--since", metavar="DATE", help="only scans on or after this date (YYYY-MM-DD)")
+    _add_db_arg(a)
+    a.set_defaults(func=cmd_history_export)
     return parser
 
 
@@ -281,7 +411,7 @@ def main(
     try:
         code: int = args.func(args, io)
         return code
-    except (AdbError, CliError, RemovalRefused, ValueError) as exc:
+    except (AdbError, CliError, CompareError, HistoryError, RemovalRefused, ValueError) as exc:
         io.warn(f"error: {exc}")
         return 1
     except KeyboardInterrupt:
