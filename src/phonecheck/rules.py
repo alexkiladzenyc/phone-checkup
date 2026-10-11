@@ -42,6 +42,7 @@ CLEANER_PERMISSIONS = frozenset(
     )
 )
 BOOT_PERMISSION = _P + "RECEIVE_BOOT_COMPLETED"
+INSTALL_PERMISSION = _P + "REQUEST_INSTALL_PACKAGES"
 
 # Granted permissions grouped by what they mean to a customer.
 SENSITIVE_ACCESS = {
@@ -166,6 +167,41 @@ def recently_installed(app: AppInfo, ctx: Context) -> Signal | None:
     return None
 
 
+def hidden_icon(app: AppInfo, ctx: Context) -> Signal | None:
+    if app.has_launcher_icon is False:
+        return Signal(
+            "hidden_icon", 3,
+            "It has no icon on the home screen or in the app drawer, so the owner cannot easily find or remove it. "
+            "Scareware often hides itself like this and only appears as pop-ups.",
+        )
+    return None
+
+
+def notification_listener(app: AppInfo, ctx: Context) -> Signal | None:
+    if app.is_notification_listener:
+        return Signal(
+            "notification_listener", 3,
+            "It can read every notification, including messages and one-time login codes. "
+            "Normal for smartwatch apps, unusual for anything else.",
+        )
+    return None
+
+
+def installs_apps(app: AppInfo, ctx: Context) -> Signal | None:
+    if INSTALL_PERMISSION in app.requested_permissions:
+        return Signal("installs_apps", 1, "It can ask to install other apps, which is how one junk app brings in more.")
+    return None
+
+
+def battery_exempt(app: AppInfo, ctx: Context) -> Signal | None:
+    if app.is_battery_exempt:
+        return Signal(
+            "battery_exempt", 1,
+            "It is excused from battery saving, so Android never puts it to sleep. Ask the owner whether they allowed this.",
+        )
+    return None
+
+
 RULES: tuple[Rule, ...] = (
     known_junk,
     junk_name,
@@ -177,6 +213,10 @@ RULES: tuple[Rule, ...] = (
     cleaner_permissions,
     sensitive_access,
     recently_installed,
+    hidden_icon,
+    notification_listener,
+    installs_apps,
+    battery_exempt,
 )
 
 

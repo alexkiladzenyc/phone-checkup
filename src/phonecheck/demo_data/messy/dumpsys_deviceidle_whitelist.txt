@@ -1,0 +1,4 @@
+system-excidle,com.android.phone,1001
+system,com.android.chrome,10110
+user,com.sysupdate.service.helper,10202
+user,com.whatsapp,10206

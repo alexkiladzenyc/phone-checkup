@@ -7,6 +7,7 @@ from phonecheck import rules
 from phonecheck.models import AppInfo, DeviceInfo, Level, Snapshot
 from phonecheck.rules import (
     BOOT_PERMISSION,
+    INSTALL_PERMISSION,
     STORE_INSTALLERS,
     Context,
     analyze,
@@ -108,6 +109,31 @@ class TestIndividualRules:
     def test_install_time_in_the_future_is_ignored(self):
         assert rules.recently_installed(app(first_install=NOW + timedelta(days=2)), ctx()) is None
 
+    def test_hidden_icon_only_when_the_phone_said_so(self):
+        assert rules.hidden_icon(app(has_launcher_icon=False), ctx()).points == 3
+        assert rules.hidden_icon(app(has_launcher_icon=True), ctx()) is None
+        assert rules.hidden_icon(app(has_launcher_icon=None), ctx()) is None  # unknown is not suspicious
+
+    def test_hidden_sideloaded_app_with_overlay_is_likely_junk_without_a_junk_name(self):
+        # The fake "system update" pattern: nothing in the name gives it away.
+        finding = evaluate(app("com.sys.update.helper", installer=None, has_overlay=True, has_launcher_icon=False), ctx())
+        assert finding.level is Level.HIGH and finding.score == 7
+        assert "junk_name" not in rule_names(finding)
+
+    def test_notification_listener(self):
+        signal = rules.notification_listener(app(is_notification_listener=True), ctx())
+        assert signal.points == 3 and "one-time login codes" in signal.reason
+        assert rules.notification_listener(app(), ctx()) is None
+
+    def test_installs_apps_is_weak(self):
+        assert rules.installs_apps(app(requested_permissions=frozenset({INSTALL_PERMISSION})), ctx()).points == 1
+        # browsers and file managers ask for this too: on its own it never reaches a report
+        assert evaluate(app(requested_permissions=frozenset({INSTALL_PERMISSION})), ctx()) is None
+
+    def test_battery_exemption_alone_is_not_reported(self):
+        assert rules.battery_exempt(app(is_battery_exempt=True), ctx()).points == 1
+        assert evaluate(app(is_battery_exempt=True), ctx()) is None
+
 
 class TestTrust:
     def trusted_ctx(self, **kw):
@@ -167,12 +193,13 @@ class TestDemoPhones:
         summary = [(f.app.package, f.level.value, f.score) for f in report.findings]
         assert summary == [
             ("com.fastphone.supercleaner.pro", "high", 15),
-            ("com.virusshield.antivirus.free", "high", 12),
+            ("com.virusshield.antivirus.free", "high", 15),
+            ("com.sysupdate.service.helper", "high", 11),
             ("com.instagram.android", "high", 10),
             ("com.fastcharge.batterysaver.cooler", "medium", 4),
             ("com.freegames.puzzle.colorblast", "medium", 3),
         ]
-        assert report.scanned == 13
+        assert report.scanned == 14
 
     def test_messy_phone_does_not_flag_normal_apps(self, messy_snapshot):
         flagged = {f.app.package for f in analyze(messy_snapshot, build_context()).findings}
@@ -205,8 +232,8 @@ class TestDemoPhones:
 
     def test_at_level_filters(self, messy_snapshot):
         report = analyze(messy_snapshot, build_context())
-        assert len(report.at_level(Level.HIGH)) == 3
-        assert len(report.at_level(Level.MEDIUM)) == 5
+        assert len(report.at_level(Level.HIGH)) == 4
+        assert len(report.at_level(Level.MEDIUM)) == 6
 
 
 class TestDeviceNotes:

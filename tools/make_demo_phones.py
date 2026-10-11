@@ -34,6 +34,12 @@ PLAY = "com.android.vending"
 BOOT = P + "RECEIVE_BOOT_COMPLETED"
 OVERLAY = P + "SYSTEM_ALERT_WINDOW"
 INTERNET = P + "INTERNET"
+INSTALL = P + "REQUEST_INSTALL_PACKAGES"
+LAUNCHER_QUERY = (
+    "cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER"
+)
+# Built-in apps that show up in the launcher and deviceidle answers of any real phone.
+SYSTEM_LAUNCHABLE = ("com.android.settings", "com.android.chrome", "com.android.camera2")
 
 
 @dataclass
@@ -48,6 +54,9 @@ class DemoApp:
     overlay: bool = False
     accessibility: bool = False
     admin: bool = False
+    notification_listener: bool = False
+    battery_exempt: bool = False
+    launcher: bool = True               # has a home-screen icon
 
 
 @dataclass
@@ -107,6 +116,20 @@ class ScriptedPhone:
 
         services = [f"{a.package}/{a.package}.AccessService" for a in phone.apps if a.accessibility]
         answers["settings get secure enabled_accessibility_services"] = ":".join(services) + "\n" if services else "null\n"
+        listeners = [f"{a.package}/{a.package}.NotifyListener" for a in phone.apps if a.notification_listener]
+        answers["settings get secure enabled_notification_listeners"] = ":".join(listeners) + "\n" if listeners else "null\n"
+
+        launchable = [*SYSTEM_LAUNCHABLE, *(a.package for a in phone.apps if a.launcher)]
+        answers[LAUNCHER_QUERY] = f"{len(launchable)} activities found:\n" + "".join(
+            f"  Activity #{i}:\n    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false\n"
+            f"    {package}/.MainActivity\n"
+            for i, package in enumerate(launchable)
+        )
+        answers["dumpsys deviceidle whitelist"] = (
+            "system-excidle,com.android.phone,1001\n"
+            "system,com.android.chrome,10110\n"
+            + "".join(f"user,{a.package},{10200 + i}\n" for i, a in enumerate(phone.apps) if a.battery_exempt)
+        )
 
         admin_lines = "".join(
             f"  {a.package}/{a.package}.AdminReceiver:\n    uid=10345\n    testOnlyAdmin=false\n"
@@ -165,7 +188,15 @@ def messy_phone() -> DemoPhone:
                 requested=(INTERNET, OVERLAY, BOOT, *sensitive),
                 install_granted=(INTERNET, BOOT, OVERLAY),
                 runtime_granted=sensitive,
-                overlay=True, admin=True,
+                overlay=True, admin=True, notification_listener=True,
+            ),
+            # Pretends to be a system update: no junk-sounding name, no icon, sideloaded,
+            # can install more apps. Flagged on behaviour alone.
+            DemoApp(
+                "com.sysupdate.service.helper", "1.0.3", "2026-10-05 22:14:03", installer=None,
+                requested=(INTERNET, OVERLAY, BOOT, INSTALL),
+                install_granted=(INTERNET, BOOT, OVERLAY),
+                overlay=True, launcher=False, battery_exempt=True,
             ),
             # Store-installed, junk-sounding name, not much else: worth a look only.
             DemoApp(
@@ -191,6 +222,7 @@ def messy_phone() -> DemoPhone:
                 requested=(INTERNET, BOOT, *sensitive, P + "RECORD_AUDIO"),
                 install_granted=(INTERNET, BOOT),
                 runtime_granted=(*sensitive, P + "RECORD_AUDIO"),
+                battery_exempt=True,
             ),
             DemoApp("com.spotify.music", "9.0.50", "2025-01-20 19:30:00", requested=(INTERNET, BOOT), install_granted=(INTERNET, BOOT)),
             DemoApp("com.facebook.katana", "510.0.0.1", "2025-02-02 12:00:00", requested=(INTERNET, BOOT), install_granted=(INTERNET, BOOT)),
@@ -222,7 +254,11 @@ def clean_phone() -> DemoPhone:
             DemoApp("com.demo.notes.simple", "1.2.0", "2025-04-04 21:10:00"),
             DemoApp("com.demo.bank.mobile", "8.1.0", "2025-05-15 10:00:00", requested=(INTERNET, P + "USE_BIOMETRIC"), install_granted=(INTERNET, P + "USE_BIOMETRIC")),
             DemoApp("org.demo.pdfviewer", "2.0.3", "2025-07-01 15:20:00"),
-            DemoApp("com.demo.fitness.steps", "5.6.0", "2025-08-08 06:30:00", requested=(INTERNET, P + "ACTIVITY_RECOGNITION"), runtime_granted=(P + "ACTIVITY_RECOGNITION",)),
+            DemoApp(
+                "com.demo.fitness.steps", "5.6.0", "2025-08-08 06:30:00",
+                requested=(INTERNET, P + "ACTIVITY_RECOGNITION"), runtime_granted=(P + "ACTIVITY_RECOGNITION",),
+                battery_exempt=True,  # step counters legitimately ask for this; one weak signal must not flag it
+            ),
             DemoApp("com.demo.maps.local", "11.2.0", "2025-09-09 13:00:00", requested=(INTERNET, P + "ACCESS_FINE_LOCATION"), runtime_granted=(P + "ACCESS_FINE_LOCATION",)),
         ],
     )

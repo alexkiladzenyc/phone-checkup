@@ -27,8 +27,8 @@ class TestText:
         text = render_text(messy_report(messy_snapshot))
         assert "Phone checkup: DemoCorp Demo A1 (Android 13)" in text
         assert "battery 38%, storage 93% full" in text
-        assert "Checked 13 user-installed apps" in text
-        assert "LIKELY JUNK (3)" in text and "WORTH A LOOK (2)" in text
+        assert "Checked 14 user-installed apps" in text
+        assert "LIKELY JUNK (4)" in text and "WORTH A LOOK (2)" in text
         assert "com.fastphone.supercleaner.pro" in text
         assert "ABOUT THE PHONE" in text and "93% full" in text
         assert "turn USB debugging off" in text
@@ -63,8 +63,8 @@ class TestJson:
     def test_is_valid_json_with_expected_shape(self, messy_snapshot):
         data = json.loads(render_json(messy_report(messy_snapshot)))
         assert data["tool"] == "phonecheck"
-        assert data["scanned_apps"] == 13
-        assert [f["level"] for f in data["findings"]] == ["high", "high", "high", "medium", "medium"]
+        assert data["scanned_apps"] == 14
+        assert [f["level"] for f in data["findings"]] == ["high", "high", "high", "high", "medium", "medium"]
         top = data["findings"][0]
         assert top["package"] == "com.fastphone.supercleaner.pro"
         assert top["installer"] is None and top["installed"] == "2026-10-04"
@@ -88,7 +88,7 @@ class TestHtml:
         assert page.startswith("<!doctype html>")
         assert "<script" not in page.lower()
         assert "http://" not in page and "https://" not in page  # no external requests
-        assert "3 apps very likely to be junk" in page
+        assert "4 apps very likely to be junk" in page
         assert "com.fastphone.supercleaner.pro" in page
 
     def test_clean_banner(self, clean_snapshot):

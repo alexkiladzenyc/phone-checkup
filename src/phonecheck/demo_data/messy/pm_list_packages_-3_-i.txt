@@ -1,5 +1,6 @@
 package:com.fastphone.supercleaner.pro  installer=null
 package:com.virusshield.antivirus.free  installer=com.android.vending
+package:com.sysupdate.service.helper  installer=null
 package:com.fastcharge.batterysaver.cooler  installer=com.android.vending
 package:com.freegames.puzzle.colorblast  installer=null
 package:com.instagram.android  installer=null

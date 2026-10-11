@@ -130,7 +130,7 @@ class TestAuthentication:
         client, _state, _ = web
         client.request("POST", "/api/remove", body={"packages": ["com.freegames.puzzle.colorblast"], "confirm": "remove"}, token="wrong")
         _, _, report = client.request("POST", "/api/scan", body={})
-        assert report["scanned_apps"] == 13
+        assert report["scanned_apps"] == 14
 
     def test_tokens_differ_between_runs(self):
         a, state_a = make_server(DeviceSource(demo="clean"), build_context(), port=0)
@@ -193,7 +193,7 @@ class TestScanApi:
         client, _, _ = web
         status, _, report = client.request("POST", "/api/scan", body={})
         assert status == 200
-        assert report["scanned_apps"] == 13
+        assert report["scanned_apps"] == 14
         assert [f["package"] for f in report["findings"]][:2] == [
             "com.fastphone.supercleaner.pro",
             "com.virusshield.antivirus.free",
@@ -266,7 +266,7 @@ class TestRemoveApi:
         assert self.remove(client, ["com.freegames.puzzle.colorblast"], confirm="yes")[0] == 400
         assert self.remove(client, ["com.freegames.puzzle.colorblast"], confirm=True)[0] == 400
         _, _, report = client.request("POST", "/api/scan", body={})
-        assert report["scanned_apps"] == 13
+        assert report["scanned_apps"] == 14
 
     @pytest.mark.parametrize("packages", [None, "com.a.b", [1, 2], [["com.a.b"]], {"a": 1}])
     def test_packages_must_be_a_list_of_strings(self, web, packages):
@@ -280,7 +280,7 @@ class TestRemoveApi:
         status, _, data = self.remove(client, packages)
         assert status == 409 and data["error"]
         _, _, report = client.request("POST", "/api/scan", body={})
-        assert report["scanned_apps"] == 13
+        assert report["scanned_apps"] == 14
 
     def test_removal_then_fresh_report(self, web):
         client, _, _ = web
@@ -289,7 +289,7 @@ class TestRemoveApi:
         assert data["results"] == [
             {"package": "com.fastphone.supercleaner.pro", "ok": True, "message": "Success", "hint": None}
         ]
-        assert data["report"]["scanned_apps"] == 12
+        assert data["report"]["scanned_apps"] == 13
         assert "com.fastphone.supercleaner.pro" not in [f["package"] for f in data["report"]["findings"]]
 
     def test_device_admin_failure_is_reported_not_hidden(self, web):

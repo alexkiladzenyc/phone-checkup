@@ -1,0 +1,3 @@
+system-excidle,com.android.phone,1001
+system,com.android.chrome,10110
+user,com.demo.fitness.steps,10206

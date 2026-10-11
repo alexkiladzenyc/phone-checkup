@@ -15,17 +15,23 @@ from .adb import LIST_USER_APPS, AdbError, Device
 from .models import AppInfo, DeviceInfo, Snapshot
 from .parsers import (
     is_valid_package,
-    parse_accessibility,
     parse_battery,
+    parse_component_setting,
     parse_device_admins,
     parse_device_time,
     parse_df,
+    parse_idle_whitelist,
+    parse_launcher_packages,
     parse_overlay_packages,
     parse_package_dump,
     parse_package_list,
 )
 
 OVERLAY_PERMISSION = "android.permission.SYSTEM_ALERT_WINDOW"
+LAUNCHER_QUERY = (
+    "cmd", "package", "query-activities", "--brief",
+    "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER",
+)
 
 T = TypeVar("T")
 
@@ -76,16 +82,22 @@ def collect(
         if is_valid_package(package)
     ]
 
-    accessibility: set[str] = _optional(
-        lambda: parse_accessibility(device.shell("settings", "get", "secure", "enabled_accessibility_services")),
-        set(),
-    )
+    def secure_setting(name: str) -> set[str]:
+        return _optional(lambda: parse_component_setting(device.shell("settings", "get", "secure", name)), set())
+
+    accessibility = secure_setting("enabled_accessibility_services")
+    listeners = secure_setting("enabled_notification_listeners")
     admins: set[str] = _optional(lambda: parse_device_admins(device.shell("dumpsys", "device_policy")), set())
+    battery_exempt: set[str] = _optional(lambda: parse_idle_whitelist(device.shell("dumpsys", "deviceidle", "whitelist")), set())
     # None means "could not ask", which differs from "asked and nobody has it".
     overlay: set[str] | None = _optional(
         lambda: parse_overlay_packages(device.shell("cmd", "appops", "query-op", "SYSTEM_ALERT_WINDOW", "allow")),
         None,
     )
+    # Every phone has *some* launcher apps (Settings, at least), so an empty answer
+    # means the output was not understood; treat that as "unknown" rather than
+    # "no app has an icon", which would flag everything.
+    launchable: set[str] | None = _optional(lambda: parse_launcher_packages(device.shell(*LAUNCHER_QUERY)), None) or None
 
     done = 0
     done_lock = threading.Lock()
@@ -105,6 +117,9 @@ def collect(
             has_overlay=(package in overlay) if overlay is not None else granted_overlay,
             is_accessibility_service=package in accessibility,
             is_device_admin=package in admins,
+            is_notification_listener=package in listeners,
+            is_battery_exempt=package in battery_exempt,
+            has_launcher_icon=(package in launchable) if launchable is not None else None,
         )
         with done_lock:
             done += 1

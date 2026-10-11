@@ -26,7 +26,7 @@ class TestScan:
     def test_text_report(self):
         code, out, err = run(["scan", "--demo", "messy"])
         assert code == 0 and err == ""
-        assert "LIKELY JUNK (3)" in out and "com.fastphone.supercleaner.pro" in out
+        assert "LIKELY JUNK (4)" in out and "com.fastphone.supercleaner.pro" in out
 
     def test_clean_phone(self):
         code, out, _ = run(["scan", "--demo", "clean"])
@@ -35,7 +35,7 @@ class TestScan:
     def test_json_format_is_valid(self):
         code, out, _ = run(["scan", "--demo", "messy", "--format", "json"])
         assert code == 0
-        assert json.loads(out)["scanned_apps"] == 13
+        assert json.loads(out)["scanned_apps"] == 14
 
     def test_html_goes_to_a_file(self, tmp_path):
         target = tmp_path / "r.html"
@@ -89,7 +89,7 @@ class TestRemove:
         code, out, _ = run(["remove", "--demo", "messy"], answers=["1", "remove"])
         assert code == 0
         assert "removed  com.fastphone.supercleaner.pro" in out
-        assert "Rescanned: 2 apps still at 'high' or higher." in out
+        assert "Rescanned: 3 apps still at 'high' or higher." in out
 
     def test_wrong_confirmation_cancels(self):
         code, out, _ = run(["remove", "--demo", "messy"], answers=["all", "yes"])
@@ -116,7 +116,7 @@ class TestRemove:
 
     def test_min_level_medium_offers_more(self):
         _code, out, _ = run(["remove", "--demo", "messy", "--min-level", "medium", "--dry-run"])
-        assert " 5. com.freegames.puzzle.colorblast" in out
+        assert " 6. com.freegames.puzzle.colorblast" in out
 
     def test_bad_selection_is_a_clean_error_and_removes_nothing(self):
         code, out, err = run(["remove", "--demo", "messy"], answers=["9", "remove"])

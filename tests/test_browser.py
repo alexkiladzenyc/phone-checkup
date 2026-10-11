@@ -64,8 +64,8 @@ def test_page_loads_and_names_the_phone_source(messy_page):
 
 def test_scan_shows_findings_grouped_by_level(messy_page):
     scan(messy_page)
-    assert messy_page.inner_text(".banner") == "3 apps very likely to be junk"
-    assert messy_page.locator("#findings .card").count() == 5
+    assert messy_page.inner_text(".banner") == "4 apps very likely to be junk"
+    assert messy_page.locator("#findings .card").count() == 6
     assert messy_page.locator("#findings h2").all_inner_texts() == ["Likely junk", "Worth a look"]
     assert "93% full" in messy_page.inner_text("#notes")
     assert messy_page.errors == []
@@ -93,7 +93,7 @@ def test_declining_the_confirmation_removes_nothing(messy_page):
     messy_page.check("input[value='com.fastphone.supercleaner.pro']")
     messy_page.click("#remove")
     messy_page.wait_for_timeout(200)
-    assert messy_page.locator("#findings .card").count() == 5
+    assert messy_page.locator("#findings .card").count() == 6
     assert messy_page.is_hidden("#results")
 
 
@@ -124,7 +124,7 @@ def test_device_admin_failure_explains_what_to_do(messy_page):
     messy_page.wait_for_selector("#results li.bad")
     assert "Could not remove com.virusshield.antivirus.free" in messy_page.inner_text("#results li.bad")
     assert "device administrator rights" in messy_page.inner_text("#results li.bad")
-    assert messy_page.locator("#findings .card").count() == 5  # still there
+    assert messy_page.locator("#findings .card").count() == 6  # still there
 
 
 def test_clean_phone_says_nothing_found(browser):

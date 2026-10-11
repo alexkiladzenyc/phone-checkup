@@ -2,11 +2,13 @@ from datetime import datetime
 
 from phonecheck.parsers import (
     is_valid_package,
-    parse_accessibility,
     parse_battery,
+    parse_component_setting,
     parse_device_admins,
     parse_device_time,
     parse_df,
+    parse_idle_whitelist,
+    parse_launcher_packages,
     parse_overlay_packages,
     parse_package_dump,
     parse_package_list,
@@ -129,15 +131,15 @@ class TestDeviceReadings:
 
 class TestSettingsAndPolicy:
     def test_accessibility_null_and_empty(self):
-        assert parse_accessibility("null\n") == set()
-        assert parse_accessibility("") == set()
+        assert parse_component_setting("null\n") == set()
+        assert parse_component_setting("") == set()
 
     def test_accessibility_multiple_services(self):
         text = "com.a.one/com.a.one.Service:com.b.two/.Short\n"
-        assert parse_accessibility(text) == {"com.a.one", "com.b.two"}
+        assert parse_component_setting(text) == {"com.a.one", "com.b.two"}
 
     def test_accessibility_ignores_junk_tokens(self):
-        assert parse_accessibility("not a package/Svc;rm -rf") == set()
+        assert parse_component_setting("not a package/Svc;rm -rf") == set()
 
     def test_device_admins(self):
         text = (
@@ -157,6 +159,48 @@ class TestSettingsAndPolicy:
     def test_overlay_packages_tolerates_formats(self):
         text = "Uid mode: SYSTEM_ALERT_WINDOW: allow\ncom.a.one\npackage:com.b.two\nPackage com.c.three: allow\n"
         assert parse_overlay_packages(text) == {"com.a.one", "com.b.two", "com.c.three"}
+
+
+class TestLauncherAndBattery:
+    BRIEF = (
+        "3 activities found:\n"
+        "  Activity #0:\n"
+        "    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false\n"
+        "    com.android.settings/.Settings\n"
+        "  Activity #1:\n"
+        "    com.example.app/com.example.app.ui.MainActivity\n"
+        "  Activity #2:\n"
+        "    org.demo.x/.Main\n"
+    )
+
+    def test_launcher_packages_from_brief_output(self):
+        assert parse_launcher_packages(self.BRIEF) == {"com.android.settings", "com.example.app", "org.demo.x"}
+
+    def test_launcher_ignores_echoed_intent_names(self):
+        # Some versions echo the query; an action or category name is not an app.
+        text = "Query: android.intent.action.MAIN android.intent.category.LAUNCHER\n  com.a.b/.Main\n"
+        assert parse_launcher_packages(text) == {"com.a.b"}
+
+    def test_launcher_rejects_injection_shaped_tokens(self):
+        assert parse_launcher_packages("x;reboot/.Main\n  com.ok.app/.Main\n") == {"com.ok.app"}
+        assert parse_launcher_packages("") == set()
+
+    def test_idle_whitelist_keeps_only_user_entries(self):
+        text = (
+            "system-excidle,com.android.phone,1001\n"
+            "system,com.google.android.gms,10123\n"
+            "user,com.example.tracker,10234\n"
+            "user,not a package,10235\n"
+            "garbage line\n"
+        )
+        assert parse_idle_whitelist(text) == {"com.example.tracker"}
+
+    def test_idle_whitelist_empty(self):
+        assert parse_idle_whitelist("") == set()
+
+    def test_notification_listeners_share_the_component_format(self):
+        text = "com.watch.companion/com.watch.companion.NotificationService:com.spy.thing/.L\n"
+        assert parse_component_setting(text) == {"com.watch.companion", "com.spy.thing"}
 
 
 def test_is_valid_package():

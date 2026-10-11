@@ -3,7 +3,9 @@ from datetime import datetime
 import pytest
 
 from phonecheck.adb import AdbError, FixtureDevice
-from phonecheck.collector import collect
+from phonecheck.collector import LAUNCHER_QUERY, collect
+
+LAUNCHER_KEY = " ".join(LAUNCHER_QUERY)
 
 
 def by_package(snapshot):
@@ -27,7 +29,7 @@ class TestDeviceInfo:
 
 class TestApps:
     def test_counts_only_user_installed_apps(self, messy_snapshot, clean_snapshot):
-        assert len(messy_snapshot.apps) == 13
+        assert len(messy_snapshot.apps) == 14
         assert len(clean_snapshot.apps) == 8
 
     def test_sideloaded_cleaner_has_every_risky_trait(self, messy_snapshot):
@@ -50,9 +52,21 @@ class TestApps:
     def test_runtime_permissions_counted_as_granted(self, messy_snapshot):
         assert "android.permission.READ_SMS" in by_package(messy_snapshot)["com.virusshield.antivirus.free"].granted_permissions
 
+    def test_hidden_icon_detected(self, messy_snapshot):
+        apps = by_package(messy_snapshot)
+        assert apps["com.sysupdate.service.helper"].has_launcher_icon is False
+        assert apps["com.whatsapp"].has_launcher_icon is True
+
+    def test_notification_listener_and_battery_exemption_detected(self, messy_snapshot):
+        apps = by_package(messy_snapshot)
+        assert apps["com.virusshield.antivirus.free"].is_notification_listener
+        assert apps["com.sysupdate.service.helper"].is_battery_exempt
+        assert not apps["com.spotify.music"].is_battery_exempt
+
     def test_clean_phone_has_no_risky_traits(self, clean_snapshot):
         for app in clean_snapshot.apps:
             assert not (app.has_overlay or app.is_accessibility_service or app.is_device_admin), app.package
+            assert not app.is_notification_listener and app.has_launcher_icon, app.package
             assert app.installer == "com.android.vending"
 
 
@@ -60,8 +74,8 @@ class TestResilience:
     def test_progress_reports_every_app(self, messy_device):
         seen = []
         collect(messy_device, workers=1, progress=lambda done, total: seen.append((done, total)))
-        assert seen[-1] == (13, 13)
-        assert len(seen) == 13
+        assert seen[-1] == (14, 14)
+        assert len(seen) == 14
 
     def test_missing_optional_reads_do_not_break_the_scan(self, tmp_path, demo_dir):
         # Drop the optional answers from a copy of the messy phone.
@@ -77,17 +91,34 @@ class TestResilience:
             "dumpsys device_policy",
             "cmd appops query-op SYSTEM_ALERT_WINDOW allow",
             "settings get secure enabled_accessibility_services",
+            "settings get secure enabled_notification_listeners",
+            "dumpsys deviceidle whitelist",
+            LAUNCHER_KEY,
         ]:
             del manifest["commands"][key]
         (copy / "manifest.json").write_text(json.dumps(manifest))
 
         snapshot = collect(FixtureDevice(copy))
-        assert len(snapshot.apps) == 13
+        assert len(snapshot.apps) == 14
         assert snapshot.device.battery_level is None
         assert snapshot.device.storage_used_pct is None
         assert not any(app.is_device_admin or app.is_accessibility_service for app in snapshot.apps)
+        assert not any(app.is_notification_listener or app.is_battery_exempt for app in snapshot.apps)
+        # "could not ask" must not read as "has no icon", or every app would be flagged
+        assert all(app.has_launcher_icon is None for app in snapshot.apps)
         # without appops, overlay falls back to the permission being granted in dumpsys
         assert by_package(snapshot)["com.fastphone.supercleaner.pro"].has_overlay
+
+    def test_unrecognised_launcher_output_is_unknown_not_hidden(self, tmp_path, demo_dir):
+        import json
+        import shutil
+
+        copy = tmp_path / "copy"
+        shutil.copytree(demo_dir / "messy", copy)
+        listing = copy / json.loads((copy / "manifest.json").read_text())["commands"][LAUNCHER_KEY]
+        listing.write_text("Unknown command: query-activities\n")
+        snapshot = collect(FixtureDevice(copy))
+        assert all(app.has_launcher_icon is None for app in snapshot.apps)
 
     def test_unreadable_app_list_is_a_hard_error(self, tmp_path, demo_dir):
         import json

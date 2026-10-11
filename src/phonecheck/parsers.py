@@ -161,8 +161,12 @@ def parse_df(text: str, mount: str = "/data") -> tuple[int, float] | None:
     return None
 
 
-def parse_accessibility(text: str) -> set[str]:
-    """`settings get secure enabled_accessibility_services` -> packages with a service switched on."""
+def parse_component_setting(text: str) -> set[str]:
+    """A secure setting holding `pkg/.Component:pkg2/.Other` -> the packages named in it.
+
+    Used for `enabled_accessibility_services` and `enabled_notification_listeners`,
+    which share the format.
+    """
     value = text.strip()
     if not value or value == "null":
         return set()
@@ -186,6 +190,35 @@ def parse_device_admins(text: str) -> set[str]:
         if match and is_valid_package(match.group(1)):
             admins.add(match.group(1))
     return admins
+
+
+_COMPONENT = re.compile(r"(?<![\w.])([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)/")
+
+
+def parse_launcher_packages(text: str) -> set[str]:
+    """`cmd package query-activities --brief -a MAIN -c LAUNCHER` -> packages that have a home-screen icon.
+
+    Only `package/component` tokens count, so the intent and category names
+    echoed in some versions' headers are not mistaken for apps.
+    """
+    return {match for match in _COMPONENT.findall(text) if is_valid_package(match)}
+
+
+_IDLE_ENTRY = re.compile(r"^\s*(?P<kind>[\w-]+),(?P<pkg>[^,\s]+),")
+
+
+def parse_idle_whitelist(text: str) -> set[str]:
+    """`dumpsys deviceidle whitelist` -> packages the *user* exempted from battery optimisation.
+
+    Lines look like `user,com.example,10234`. `system` and `system-excidle`
+    entries are set by the phone maker, so they say nothing about an app.
+    """
+    packages = set()
+    for line in text.splitlines():
+        match = _IDLE_ENTRY.match(line)
+        if match and match.group("kind") == "user" and is_valid_package(match.group("pkg")):
+            packages.add(match.group("pkg"))
+    return packages
 
 
 def parse_overlay_packages(text: str) -> set[str]:

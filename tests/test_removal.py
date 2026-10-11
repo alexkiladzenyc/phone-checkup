@@ -14,7 +14,7 @@ def test_removes_a_chosen_app_and_it_is_gone_on_rescan(messy_device):
     results = remove_packages(messy_device, ["com.fastphone.supercleaner.pro"])
     assert [(r.package, r.ok) for r in results] == [("com.fastphone.supercleaner.pro", True)]
     assert "com.fastphone.supercleaner.pro" not in installed(messy_device)
-    assert len(installed(messy_device)) == 12
+    assert len(installed(messy_device)) == 13
 
 
 def test_only_the_chosen_apps_are_removed(messy_device):

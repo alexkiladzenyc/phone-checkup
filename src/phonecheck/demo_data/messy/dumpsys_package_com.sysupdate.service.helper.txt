@@ -1,0 +1,19 @@
+Packages:
+  Package [com.sysupdate.service.helper] (4f2a9c1):
+    userId=10234
+    versionCode=100 minSdk=24 targetSdk=33
+    versionName=1.0.3
+    firstInstallTime=2026-10-05 22:14:03
+    lastUpdateTime=2026-10-05 22:14:03
+    installerPackageName=null
+    requested permissions:
+      android.permission.INTERNET
+      android.permission.SYSTEM_ALERT_WINDOW
+      android.permission.RECEIVE_BOOT_COMPLETED
+      android.permission.REQUEST_INSTALL_PACKAGES
+    install permissions:
+      android.permission.INTERNET: granted=true
+      android.permission.RECEIVE_BOOT_COMPLETED: granted=true
+      android.permission.SYSTEM_ALERT_WINDOW: granted=true
+    User 0: ceDataInode=1234 installed=true hidden=false suspended=false
+      runtime permissions:

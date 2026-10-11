@@ -44,7 +44,7 @@ Turn USB debugging off again when you are done. The tool reminds you.
 
 ## What it reads, and what it never touches
 
-Reads (all via standard `adb shell` commands): the model and Android version, battery level/health/temperature, storage usage, the list of **user-installed** apps, and for each one its installer, version, install date, requested and granted permissions, whether it can draw over other apps, whether it has an accessibility service on, and whether it is a device administrator.
+Reads (all via standard `adb shell` commands): the model and Android version, battery level/health/temperature, storage usage, the list of **user-installed** apps, and for each one its installer, version, install date, requested and granted permissions, whether it can draw over other apps, whether it has an accessibility service or notification listener on, whether it is a device administrator, whether it has a launcher icon, and whether the user exempted it from battery optimisation.
 
 Never reads: contacts, messages, photos, call history, accounts, the phone number, serial number or IMEI. System apps are skipped entirely.
 
@@ -60,12 +60,16 @@ Each rule is a small function that returns points and a reason written for the c
 | `accessibility_service` | 4 | Can read the screen and tap for you |
 | `device_admin` | 4 | Can lock the phone and resist removal |
 | `junk_name` | 3 | Name sounds like a cleaner/booster/antivirus |
+| `hidden_icon` | 3 | Has no home-screen icon, so the owner can't find it to remove it |
+| `notification_listener` | 3 | Can read every notification, including one-time login codes |
 | `not_from_store` | 2 | Not installed from a known app store |
 | `overlay` | 2 | Can draw on top of other apps (fake "virus found" pop-ups) |
 | `cleaner_permissions` | 2 | Asks for the permissions fake cleaners use to look busy |
 | `sensitive_access` | 2 | Has access to 3+ of: texts, contacts, call history, microphone, calls |
 | `boot_start` | 1 | Starts itself every time the phone turns on |
 | `recently_installed` | 1 | Installed in the last 7 days |
+| `installs_apps` | 1 | Can ask to install other apps |
+| `battery_exempt` | 1 | Excused from battery saving, so Android never puts it to sleep |
 
 Score 6 or more is **likely junk**; 3 to 5 is **worth a look**; below 3 is not reported. A junk-sounding name alone (3 points) can never reach "likely junk": it takes behaviour to get there. Why a points system rather than something fancier is in [DECISIONS.md](DECISIONS.md).
 

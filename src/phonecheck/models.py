@@ -34,6 +34,9 @@ class AppInfo:
     has_overlay: bool = False               # allowed to draw over other apps
     is_accessibility_service: bool = False  # has an accessibility service switched on
     is_device_admin: bool = False           # is an active device administrator
+    is_notification_listener: bool = False  # can read every notification (including one-time codes)
+    is_battery_exempt: bool = False         # the user exempted it from battery optimisation
+    has_launcher_icon: bool | None = None   # None = the phone would not say
 
 
 @dataclass(frozen=True)
