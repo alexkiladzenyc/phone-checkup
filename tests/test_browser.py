@@ -111,8 +111,8 @@ def test_confirmed_removal_updates_the_page(messy_page):
     messy_page.wait_for_selector("#results li")
     assert "com.fastphone.supercleaner.pro" in seen[0] and "Remove 1 app" in seen[0]
     assert messy_page.inner_text("#results li") == "Removed com.fastphone.supercleaner.pro"
-    assert messy_page.inner_text(".banner") == "2 apps very likely to be junk"
-    assert messy_page.locator("#findings .card").count() == 4
+    assert messy_page.inner_text(".banner") == "3 apps very likely to be junk"
+    assert messy_page.locator("#findings .card").count() == 5
     assert messy_page.locator("#findings input:checked").count() == 0
 
 

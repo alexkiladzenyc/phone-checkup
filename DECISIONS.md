@@ -28,11 +28,11 @@ Skipping well-known apps avoids false alarms on WhatsApp, Spotify and so on, but
 
 ## 6. One small device interface, three implementations
 
-`shell(*args)` and `uninstall(package)`. A real phone, a replay of recorded text, and a recorder that wraps another device all satisfy it. This is what makes 270+ tests, a hardware-free demo, and `capture` (turn a real phone's output into a new test fixture) possible without mocking `subprocess` everywhere. The demo phones are produced by pushing scripted answers through the real collector and recorder, and a test fails if the committed copies drift.
+`shell(*args)` and `uninstall(package)`. A real phone, a replay of recorded text, and a recorder that wraps another device all satisfy it. This is what makes 340 tests, a hardware-free demo, and `capture` (turn a real phone's output into a new test fixture) possible without mocking `subprocess` everywhere. The demo phones are produced by pushing scripted answers through the real collector and recorder, and a test fails if the committed copies drift.
 
 ## 7. Standard library only
 
-No runtime dependencies. It installs anywhere Python 3.10+ runs, there is nothing to audit or update, and the web server is `http.server` plus roughly 230 lines. The only third-party package anywhere is Playwright, as an optional test tool.
+No runtime dependencies. It installs anywhere Python 3.10+ runs, there is nothing to audit or update, and the web server is `http.server` plus roughly 250 lines; the history store is the bundled `sqlite3`. Third-party packages appear only in development: pytest, ruff, mypy, and Playwright for the optional browser tests.
 **Trade-off:** more hand-written code than a framework would need. For three endpoints that is cheaper than a dependency.
 
 ## 8. Untrusted text on both sides
@@ -46,6 +46,22 @@ A page on localhost that can uninstall apps is attractive to any website the use
 ## 10. Privacy by omission
 
 It only asks for what the rules need. It does not read contacts, messages, photos, accounts or identifiers, and reports and JSON contain none (a test checks this). The one risk left is `capture`, whose output lists every installed app, so it warns, and `.gitignore` excludes captures and generated reports.
+
+## 11. "Unknown" is not "suspicious"
+
+Some readings can fail or come back in a shape the parser doesn't recognise. Each one has a safe default: an unreadable accessibility or admin list means "nobody has it", and an unrecognised launcher answer means every app's icon status is *unknown* (`None`), not *hidden*. An empty launcher list is treated the same way, because every phone has at least Settings in its launcher.
+**Why:** `hidden_icon` is worth 3 points. If a parse failure counted as "hidden", one manufacturer's output format would flag every app on the phone at once, and the person at the counter would stop trusting the tool. A missed signal on an odd phone is cheaper than that.
+
+## 12. History is opt-in, local, and stores the minimum
+
+`--save` writes to a SQLite file on the same computer. Nothing is uploaded, and nothing is saved unless asked. A record holds the phone model and the *flagged* apps only, because that is all the stats need ("which junk keeps coming back", "which rules do the work"). Storing every installed app would turn a junk log into a log of what customers use.
+**Schema changes** are numbered migrations tracked with `PRAGMA user_version`, each applied in one transaction (version bump included). A database from a newer version is refused with a message rather than guessed at. A test injects a broken migration and checks that nothing half-applied is left behind.
+**Why SQLite rather than a JSON file:** the useful questions ("most flagged apps since the 1st", "share of flags each rule contributed to") are a `GROUP BY`. It ships with Python, so it adds no dependency.
+**Exported CSV** escapes cells starting with `=`, `+`, `-` or `@`, because model names and installers come from the phone and the file will be opened in a spreadsheet.
+
+## 13. Tooling as a guardrail
+
+CI runs ruff (including bandit's security rules), `mypy --strict`, and the tests on Linux, Windows and macOS for Python 3.10 to 3.13. Every lint exception is written next to the code or in `pyproject.toml` with a reason. Windows in the matrix earned its place by finding a real bug: the server answered rejected requests without reading their body, which Windows turns into a connection reset, so a browser saw a network error instead of the error message.
 
 ## Known weaknesses
 
