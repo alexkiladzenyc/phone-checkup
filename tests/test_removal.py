@@ -47,7 +47,7 @@ def test_rescan_after_removal_changes_the_report(messy_device):
     remove_packages(messy_device, ["com.fastphone.supercleaner.pro", "com.instagram.android"])
     after = analyze(collect(messy_device), ctx)
     assert len(before.findings) - len(after.findings) == 2
-    assert [f.app.package for f in after.findings][0] == "com.virusshield.antivirus.free"
+    assert next(f.app.package for f in after.findings) == "com.virusshield.antivirus.free"
 
 
 class TestRefusals:

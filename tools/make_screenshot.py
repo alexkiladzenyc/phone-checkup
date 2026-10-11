@@ -14,11 +14,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from playwright.sync_api import sync_playwright  # noqa: E402
+from playwright.sync_api import sync_playwright
 
-from phonecheck.rules import build_context  # noqa: E402
-from phonecheck.server import make_server  # noqa: E402
-from phonecheck.source import DeviceSource  # noqa: E402
+from phonecheck.rules import build_context
+from phonecheck.server import make_server
+from phonecheck.source import DeviceSource
 
 
 def main(out: Path = ROOT / "docs" / "screenshot.png") -> None:

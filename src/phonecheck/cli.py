@@ -4,17 +4,18 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, TextIO
+from typing import TextIO
 
 from . import __version__, lists
-from .adb import AdbError, RecordingDevice, list_devices
+from .adb import AdbError, Device, RecordingDevice, list_devices
 from .collector import collect
 from .models import Level, Report
 from .removal import RemovalRefused, remove_packages
 from .report import USB_REMINDER, format_finding, render_html, render_json, render_text
-from .rules import analyze, build_context
+from .rules import Context, analyze, build_context
 from .source import DEMO_NAMES, DeviceSource
 
 DEFAULT_HTML_NAME = "phonecheck-report.html"
@@ -55,7 +56,7 @@ def _add_list_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--trusted-list", action="append", default=[], metavar="FILE", help="extra trusted packages")
 
 
-def _context(args):
+def _context(args: argparse.Namespace) -> Context:
     extra_junk: set[str] = set()
     extra_trusted: set[str] = set()
     for path in args.junk_list:
@@ -65,7 +66,7 @@ def _context(args):
     return build_context(extra_junk=extra_junk, extra_trusted=extra_trusted)
 
 
-def _scan(source: DeviceSource, args, io: Io) -> tuple[Report, object]:
+def _scan(source: DeviceSource, args: argparse.Namespace, io: Io) -> tuple[Report, Device]:
     device = source.open()
     show_progress = io.err.isatty()
 
@@ -84,7 +85,7 @@ def _scan(source: DeviceSource, args, io: Io) -> tuple[Report, object]:
 # --------------------------------------------------------------------------
 
 
-def cmd_devices(args, io: Io) -> int:
+def cmd_devices(args: argparse.Namespace, io: Io) -> int:
     entries = list_devices(args.adb)
     if not entries:
         io.say("No phones found. Plug one in with a data cable and turn on USB debugging.")
@@ -99,7 +100,7 @@ def cmd_devices(args, io: Io) -> int:
     return 0
 
 
-def cmd_scan(args, io: Io) -> int:
+def cmd_scan(args: argparse.Namespace, io: Io) -> int:
     source = DeviceSource.from_args(args)
     report, _ = _scan(source, args, io)
 
@@ -131,7 +132,7 @@ def parse_selection(answer: str, count: int) -> list[int]:
         try:
             if "-" in part:
                 low, high = (int(x) for x in part.split("-", 1))
-                numbers = range(low, high + 1)
+                numbers: Iterable[int] = range(low, high + 1)
             else:
                 numbers = [int(part)]
         except ValueError:
@@ -146,7 +147,7 @@ def parse_selection(answer: str, count: int) -> list[int]:
     return chosen
 
 
-def cmd_remove(args, io: Io) -> int:
+def cmd_remove(args: argparse.Namespace, io: Io) -> int:
     source = DeviceSource.from_args(args)
     report, device = _scan(source, args, io)
     level = Level(args.min_level)
@@ -203,7 +204,7 @@ def cmd_remove(args, io: Io) -> int:
     return 0 if all(r.ok for r in results) else 1
 
 
-def cmd_capture(args, io: Io) -> int:
+def cmd_capture(args: argparse.Namespace, io: Io) -> int:
     out_dir = Path(args.out)
     if out_dir.exists() and any(out_dir.iterdir()):
         raise CliError(f"{out_dir} is not empty. Choose a new folder.")
@@ -216,7 +217,7 @@ def cmd_capture(args, io: Io) -> int:
     return 0
 
 
-def cmd_serve(args, io: Io) -> int:
+def cmd_serve(args: argparse.Namespace, io: Io) -> int:
     from .server import serve
 
     return serve(DeviceSource.from_args(args), _context(args), port=args.port, open_browser=not args.no_browser, io=io)
@@ -278,7 +279,8 @@ def main(
     io = Io(out=stdout or sys.stdout, err=stderr or sys.stderr, input_fn=input_fn)
     args = build_parser().parse_args(argv)
     try:
-        return args.func(args, io)
+        code: int = args.func(args, io)
+        return code
     except (AdbError, CliError, RemovalRefused, ValueError) as exc:
         io.warn(f"error: {exc}")
         return 1

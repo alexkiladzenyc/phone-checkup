@@ -11,9 +11,9 @@ it only produces Findings for a person to review.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, replace
 from datetime import datetime
-from typing import Callable, Iterable
 
 from . import lists
 from .models import AppInfo, DeviceInfo, Finding, Level, Report, Signal, Snapshot

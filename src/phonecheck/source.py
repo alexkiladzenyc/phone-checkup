@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 from .adb import AdbDevice, AdbError, Device, FixtureDevice, list_devices
@@ -28,7 +29,7 @@ class DeviceSource:
         self._offline: FixtureDevice | None = None
 
     @classmethod
-    def from_args(cls, args) -> "DeviceSource":
+    def from_args(cls, args: argparse.Namespace) -> DeviceSource:
         return cls(demo=args.demo, fixture=args.fixture, serial=args.serial, adb_path=args.adb)
 
     @property
@@ -44,9 +45,10 @@ class DeviceSource:
         return f"phone {self.serial}" if self.serial else "connected phone"
 
     def open(self) -> Device:
-        if not self.is_real:
+        folder = DEMO_ROOT / self.demo if self.demo else self.fixture
+        if folder is not None:
             if self._offline is None:
-                self._offline = FixtureDevice(DEMO_ROOT / self.demo if self.demo else self.fixture)
+                self._offline = FixtureDevice(folder)
             return self._offline
         return AdbDevice(serial=self.serial or self._only_connected_serial(), adb_path=self.adb_path)
 

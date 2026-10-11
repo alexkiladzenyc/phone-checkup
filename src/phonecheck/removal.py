@@ -10,8 +10,8 @@ Nothing here decides *what* to remove; that is the caller's job.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 from .adb import LIST_USER_APPS, Device
 from .parsers import is_valid_package, parse_package_list

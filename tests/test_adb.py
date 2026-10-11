@@ -5,10 +5,10 @@ import pytest
 
 from phonecheck import adb
 from phonecheck.adb import (
+    LIST_USER_APPS,
     AdbDevice,
     AdbError,
     FixtureDevice,
-    LIST_USER_APPS,
     RecordingDevice,
     check_shell_args,
     list_devices,

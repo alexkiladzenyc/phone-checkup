@@ -127,7 +127,7 @@ class TestAuthentication:
         assert client.request("POST", "/api/remove", body={"packages": ["com.freegames.puzzle.colorblast"], "confirm": "remove"}, token=token)[0] == 403
 
     def test_a_bad_token_removes_nothing(self, web):
-        client, state, _ = web
+        client, _state, _ = web
         client.request("POST", "/api/remove", body={"packages": ["com.freegames.puzzle.colorblast"], "confirm": "remove"}, token="wrong")
         _, _, report = client.request("POST", "/api/scan", body={})
         assert report["scanned_apps"] == 13
@@ -149,7 +149,7 @@ class TestAuthentication:
 class TestRequestValidation:
     def test_post_must_be_json(self, web):
         client, _, _ = web
-        status, _, data = client.request("POST", "/api/scan", body="{}", headers={"Content-Type": "text/plain"}, json_body=False)
+        status, _, _data = client.request("POST", "/api/scan", body="{}", headers={"Content-Type": "text/plain"}, json_body=False)
         assert status == 415
         status, _, _ = client.request("POST", "/api/scan", body="a=b", headers={"Content-Type": "application/x-www-form-urlencoded"}, json_body=False)
         assert status == 415
@@ -167,8 +167,11 @@ class TestRequestValidation:
         assert client.request("POST", "/api/scan", body="[1,2]")[0] == 400
 
     def test_oversized_body(self, web):
+        # The limit is checked against the declared length before anything is read. Declaring a
+        # large body without streaming it keeps the test deterministic: streaming 64 KB into a
+        # socket the server has already answered and closed is reset by Windows mid-send.
         client, _, _ = web
-        status, _, _ = client.request("POST", "/api/scan", body="{" + " " * (MAX_BODY + 10) + "}")
+        status, _, _ = client.request("POST", "/api/scan", body="{}", headers={"Content-Length": str(MAX_BODY + 1)})
         assert status == 413
 
     def test_wrong_methods_are_not_routed(self, web):

@@ -12,7 +12,7 @@ license = { text = "MIT" }
 dependencies = []  # standard library only, on purpose
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+dev = ["pytest>=7", "pytest-cov>=4", "ruff>=0.6", "mypy>=1.10"]
 e2e = ["pytest>=7", "playwright>=1.40"]  # real-browser tests; they skip themselves without it
 
 [project.scripts]
@@ -22,8 +22,51 @@ phonecheck = "phonecheck.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-phonecheck = ["data/*.txt", "demo_data/*/*", "web/*"]
+phonecheck = ["data/*.txt", "demo_data/*/*", "web/*", "py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["phonecheck"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_also = ["if __name__ == .__main__.:"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py310"
+src = ["src", "tests", "tools"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F",  # pycodestyle, pyflakes
+    "I",            # import order
+    "B",            # bugbear: likely bugs
+    "UP",           # modern syntax for the minimum Python version
+    "S",            # bandit: security smells
+    "BLE",          # no blind `except Exception` without a stated reason
+    "N",            # naming
+    "SIM",          # simpler equivalents
+    "RUF",
+]
+ignore = [
+    "S603",    # subprocess without a shell: every argument is allowlisted first (adb.py)
+    "S607",    # "adb" found on PATH is how platform-tools is meant to be used
+    "SIM108",  # a ternary is not always clearer
+    "N818",    # RemovalRefused reads better than RemovalRefusedError at the call sites
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S108", "S310", "E501"]  # asserts, fake tokens and temp paths are the point of tests
+"tools/**" = ["E402", "E501"]  # scripts put src/ on sys.path before importing
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src"]
+strict = true
+warn_unreachable = true

@@ -10,12 +10,12 @@ import threading
 import pytest
 
 pytest.importorskip("playwright.sync_api")
-from playwright.sync_api import Error as PlaywrightError  # noqa: E402
-from playwright.sync_api import sync_playwright  # noqa: E402
+from playwright.sync_api import Error as PlaywrightError
+from playwright.sync_api import sync_playwright
 
-from phonecheck.rules import build_context  # noqa: E402
-from phonecheck.server import make_server  # noqa: E402
-from phonecheck.source import DeviceSource  # noqa: E402
+from phonecheck.rules import build_context
+from phonecheck.server import make_server
+from phonecheck.source import DeviceSource
 
 
 @pytest.fixture(scope="module")
@@ -30,7 +30,7 @@ def browser():
 
 
 def serve(source):
-    httpd, state = make_server(source, build_context(), port=0)
+    httpd, _state = make_server(source, build_context(), port=0)
     thread = threading.Thread(target=lambda: httpd.serve_forever(poll_interval=0.01), daemon=True)
     thread.start()
     return httpd, thread, f"http://127.0.0.1:{httpd.server_address[1]}/"

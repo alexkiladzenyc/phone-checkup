@@ -27,6 +27,7 @@ import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from .adb import AdbError, list_devices
 from .collector import collect
@@ -35,9 +36,12 @@ from .report import to_dict
 from .rules import Context, analyze
 from .source import DeviceSource
 
+if TYPE_CHECKING:
+    from .cli import Io
+
 WEB_ROOT = Path(__file__).resolve().parent / "web"
 MAX_BODY = 64 * 1024
-TOKEN_HEADER = "X-Phonecheck-Token"
+TOKEN_HEADER = "X-Phonecheck-Token"  # noqa: S105 - a header name, not a secret
 STATIC_FILES = {
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/app.css": ("app.css", "text/css; charset=utf-8"),
@@ -79,9 +83,10 @@ class Handler(BaseHTTPRequestHandler):
 
     @property
     def state(self) -> AppState:
-        return self.server.state  # type: ignore[attr-defined]
+        state: AppState = self.server.state  # type: ignore[attr-defined]
+        return state
 
-    def log_message(self, format, *args):  # keep the terminal quiet; errors are reported explicitly
+    def log_message(self, format: str, *args: Any) -> None:  # keep the terminal quiet; errors are reported explicitly
         pass
 
     # ---- plumbing -------------------------------------------------------
@@ -95,7 +100,7 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _json(self, status: HTTPStatus, payload: dict) -> None:
+    def _json(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
         self._send(status, json.dumps(payload).encode("utf-8"), "application/json")
 
     def _check_host(self) -> None:
@@ -107,7 +112,7 @@ class Handler(BaseHTTPRequestHandler):
         if not hmac.compare_digest(supplied.encode("utf-8"), self.state.token.encode("utf-8")):
             raise _HttpError(HTTPStatus.FORBIDDEN, "Missing or wrong token. Reload the page.")
 
-    def _read_json(self) -> dict:
+    def _read_json(self) -> dict[str, Any]:
         content_type = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
         if content_type != "application/json":
             raise _HttpError(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, "Send application/json.")
@@ -157,17 +162,17 @@ class Handler(BaseHTTPRequestHandler):
             print(f"phonecheck: unexpected error: {exc!r}", file=sys.stderr)
             self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "Something went wrong. See the terminal."})
 
-    def do_GET(self) -> None:  # noqa: N802 - http.server's naming
+    def do_GET(self) -> None:
         self._dispatch("GET")
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         self._dispatch("POST")
 
     # ---- actions --------------------------------------------------------
 
-    def _status(self) -> dict:
+    def _status(self) -> dict[str, Any]:
         source = self.state.source
-        phones: list[dict] = []
+        phones: list[dict[str, Any]] = []
         note = None
         if source.is_real:
             try:
@@ -179,12 +184,12 @@ class Handler(BaseHTTPRequestHandler):
                 note = str(exc)
         return {"source": source.label, "simulated": not source.is_real, "phones": phones, "note": note}
 
-    def _scan(self) -> dict:
+    def _scan(self) -> dict[str, Any]:
         with self.state.lock:
             snapshot = collect(self.state.source.open())
             return to_dict(analyze(snapshot, self.state.context))
 
-    def _remove(self, body: dict) -> dict:
+    def _remove(self, body: dict[str, Any]) -> dict[str, Any]:
         packages = body.get("packages")
         if not isinstance(packages, list) or not all(isinstance(p, str) for p in packages):
             raise _HttpError(HTTPStatus.BAD_REQUEST, "'packages' must be a list of package names.")
@@ -213,7 +218,7 @@ def make_server(source: DeviceSource, context: Context, port: int = 8765) -> tup
     return server, state
 
 
-def serve(source: DeviceSource, context: Context, *, port: int, open_browser: bool, io) -> int:
+def serve(source: DeviceSource, context: Context, *, port: int, open_browser: bool, io: Io) -> int:
     server, _ = make_server(source, context, port)
     url = f"http://127.0.0.1:{server.server_address[1]}/"
     io.say(f"phonecheck is running at {url}   (press Ctrl+C to stop)")

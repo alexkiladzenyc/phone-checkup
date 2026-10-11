@@ -1,6 +1,5 @@
 import io
 import json
-from pathlib import Path
 
 import pytest
 
@@ -46,7 +45,7 @@ class TestScan:
 
     def test_html_default_filename(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        code, out, _ = run(["scan", "--demo", "clean", "--format", "html"])
+        code, _out, _ = run(["scan", "--demo", "clean", "--format", "html"])
         assert code == 0 and (tmp_path / cli.DEFAULT_HTML_NAME).exists()
 
     def test_fixture_directory(self, demo_dir):
@@ -62,13 +61,13 @@ class TestScan:
     def test_extra_trusted_list_changes_the_result(self, tmp_path):
         trusted = tmp_path / "trusted.txt"
         trusted.write_text("com.fastcharge.batterysaver.cooler\n")
-        code, out, _ = run(["scan", "--demo", "messy", "--trusted-list", str(trusted)])
+        _code, out, _ = run(["scan", "--demo", "messy", "--trusted-list", str(trusted)])
         assert "batterysaver" not in out
 
     def test_bad_list_file_is_a_clean_error(self, tmp_path):
         bad = tmp_path / "bad.txt"
         bad.write_text("this is not a package\n")
-        code, out, err = run(["scan", "--demo", "messy", "--junk-list", str(bad)])
+        code, _out, err = run(["scan", "--demo", "messy", "--junk-list", str(bad)])
         assert code == 1 and "error:" in err and "line 1" in err
 
     def test_unknown_fixture_is_a_clean_error(self, tmp_path):
@@ -116,7 +115,7 @@ class TestRemove:
         assert "removed  com.fastphone.supercleaner.pro" in out  # the others still went through
 
     def test_min_level_medium_offers_more(self):
-        code, out, _ = run(["remove", "--demo", "messy", "--min-level", "medium", "--dry-run"])
+        _code, out, _ = run(["remove", "--demo", "messy", "--min-level", "medium", "--dry-run"])
         assert " 5. com.freegames.puzzle.colorblast" in out
 
     def test_bad_selection_is_a_clean_error_and_removes_nothing(self):
@@ -124,7 +123,7 @@ class TestRemove:
         assert code == 1 and "no app numbered 9" in err.lower() and "removed  " not in out
 
     def test_typed_confirmation_is_case_insensitive(self):
-        code, out, _ = run(["remove", "--demo", "messy"], answers=["1", "REMOVE"])
+        _code, out, _ = run(["remove", "--demo", "messy"], answers=["1", "REMOVE"])
         assert "removed  com.fastphone.supercleaner.pro" in out
 
 

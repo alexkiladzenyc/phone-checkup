@@ -102,7 +102,6 @@ class TestResilience:
             collect(FixtureDevice(copy))
 
     def test_package_names_that_fail_validation_are_skipped(self, tmp_path, demo_dir):
-        import json
         import shutil
 
         copy = tmp_path / "copy"

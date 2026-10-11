@@ -26,8 +26,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from phonecheck.adb import AdbError, RecordingDevice  # noqa: E402
-from phonecheck.collector import collect  # noqa: E402
+from phonecheck.adb import AdbError, RecordingDevice
+from phonecheck.collector import collect
 
 P = "android.permission."
 PLAY = "com.android.vending"
@@ -162,7 +162,7 @@ def messy_phone() -> DemoPhone:
             # A "free antivirus" from the store that is also a device administrator.
             DemoApp(
                 "com.virusshield.antivirus.free", "2.9.0", "2026-09-28 11:02:45",
-                requested=(INTERNET, OVERLAY, BOOT) + sensitive,
+                requested=(INTERNET, OVERLAY, BOOT, *sensitive),
                 install_granted=(INTERNET, BOOT, OVERLAY),
                 runtime_granted=sensitive,
                 overlay=True, admin=True,
@@ -188,9 +188,9 @@ def messy_phone() -> DemoPhone:
             # Normal apps. WhatsApp has enough permissions to be flagged if it weren't trusted.
             DemoApp(
                 "com.whatsapp", "2.26.30.1", "2025-03-12 09:00:00",
-                requested=(INTERNET, BOOT) + sensitive + (P + "RECORD_AUDIO",),
+                requested=(INTERNET, BOOT, *sensitive, P + "RECORD_AUDIO"),
                 install_granted=(INTERNET, BOOT),
-                runtime_granted=sensitive + (P + "RECORD_AUDIO",),
+                runtime_granted=(*sensitive, P + "RECORD_AUDIO"),
             ),
             DemoApp("com.spotify.music", "9.0.50", "2025-01-20 19:30:00", requested=(INTERNET, BOOT), install_granted=(INTERNET, BOOT)),
             DemoApp("com.facebook.katana", "510.0.0.1", "2025-02-02 12:00:00", requested=(INTERNET, BOOT), install_granted=(INTERNET, BOOT)),

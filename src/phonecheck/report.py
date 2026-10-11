@@ -9,6 +9,7 @@ from __future__ import annotations
 import html
 import json
 import textwrap
+from typing import Any
 
 from . import __version__
 from .models import Finding, Level, Report
@@ -37,7 +38,7 @@ def _source(finding: Finding) -> str:
 # --------------------------------------------------------------------------
 
 
-def to_dict(report: Report) -> dict:
+def to_dict(report: Report) -> dict[str, Any]:
     d = report.device
     return {
         "tool": "phonecheck",

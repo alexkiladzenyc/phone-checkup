@@ -11,9 +11,9 @@ a test) can be added for it.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterator
 
 # Android package names: dot-separated segments, first character a letter.
 PACKAGE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$")

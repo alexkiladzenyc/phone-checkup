@@ -7,8 +7,9 @@ changes anything on the phone; every command below only reads.
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Callable, TypeVar
+from typing import TypeVar
 
 from .adb import LIST_USER_APPS, AdbError, Device
 from .models import AppInfo, DeviceInfo, Snapshot
@@ -75,11 +76,11 @@ def collect(
         if is_valid_package(package)
     ]
 
-    accessibility = _optional(
+    accessibility: set[str] = _optional(
         lambda: parse_accessibility(device.shell("settings", "get", "secure", "enabled_accessibility_services")),
         set(),
     )
-    admins = _optional(lambda: parse_device_admins(device.shell("dumpsys", "device_policy")), set())
+    admins: set[str] = _optional(lambda: parse_device_admins(device.shell("dumpsys", "device_policy")), set())
     # None means "could not ask", which differs from "asked and nobody has it".
     overlay: set[str] | None = _optional(
         lambda: parse_overlay_packages(device.shell("cmd", "appops", "query-op", "SYSTEM_ALERT_WINDOW", "allow")),
